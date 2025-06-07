@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visão Financeira - Calculadora Avançada com IA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- © 2024 Visão Financeira. Todos os direitos reservados. A cópia não autorizada deste código é proibida. -->
+    <style>
+        /* Paleta de Cores Inspirada na Logo */
+        :root {
+            --dark-green: #1A433A;
+            --gold: #C4A97A;
+            --light-gold: #fdfaf5;
+            --light-green: #e8efed;
+            --off-white: #F5F3F0;
+            --text-dark: #2c3e50;
+            --text-light: #596a75;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--off-white);
+            color: var(--text-dark);
+        }
+
+        /* Abas */
+        .tab-button.active {
+            border-color: var(--gold);
+            color: var(--dark-green);
+            background-color: var(--light-gold);
+            font-weight: 600;
+        }
+        .tab-button {
+             border-bottom: 2px solid transparent;
+             transition: all 0.3s ease;
+        }
+        .tab-button:hover {
+            color: var(--dark-green);
+            border-color: var(--gold);
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Cards */
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.07), 0 2px 8px -2px rgba(0, 0, 0, 0.04);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid #e5e7eb;
+        }
+
+        /* Formulários */
+        .input-group label {
+            display: block;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        .input-group input, .input-group select, .input-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+        .input-group input:focus, .input-group select:focus, .input-group textarea:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(196, 169, 122, 0.3);
+        }
+
+        /* Botões */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-primary {
+            background-color: var(--dark-green);
+            color: white;
+        }
+        .btn-primary:hover { background-color: #112e27; }
+        .btn-secondary {
+            background-color: var(--gold);
+            color: var(--dark-green);
+        }
+        .btn-secondary:hover { background-color: #b3986c; }
+        .btn-ai {
+            background-color: var(--gold);
+            color: var(--dark-green);
+            font-weight: 500;
+        }
+        .btn-ai:hover { background-color: #b3986c; }
+        .btn-remove {
+            background-color: #ef4444; /* red-500 */
+            color: white;
+            padding: 0.3rem 0.6rem;
+            font-size: 0.75rem;
+            border-radius: 0.25rem;
+        }
+        .btn-remove:hover { background-color: #dc2626; /* red-600 */ }
+        
+        /* Resultados e Análises */
+        .results-card {
+            background-color: var(--light-green);
+            border: 1px solid var(--dark-green);
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+        .results-card h4 { color: var(--dark-green); font-weight: 700; }
+        .results-card p, .results-card span { color: var(--dark-green); }
+        .ai-analysis-card {
+            background-color: var(--light-gold);
+            border: 1px solid var(--gold);
+            margin-top: 1.5rem;
+            padding: 1.25rem;
+            border-radius: 0.5rem;
+        }
+        .ai-analysis-card h4 { color: var(--dark-green); }
+        .ai-analysis-card p { color: var(--text-dark); }
+        
+        /* Componentes Específicos */
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--gold);
+            border-radius: 50%; width: 24px; height: 24px;
+            animation: spin 1s linear infinite; margin: 10px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .chart-container { height: 400px; position: relative; }
+        .error-message { color: #ef4444; font-size: 0.875rem; margin-top: 0.25rem; }
+        .asset-class-item {
+            border: 1px solid #e0d9cf;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .asset-item {
+            border: 1px solid #e8efed;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            background-color: #f8fbfb;
+        }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+    <div class="container mx-auto max-w-5xl p-4">
+        <header class="mt-8 mb-10">
+            <div class="flex flex-col items-center text-center">
+                <!-- Logo -->
+                <img src="https://i.imgur.com/pkPxpwN.png" alt="Logo Visão Financeira" style="width: 120px; height: auto;" class="mb-4">
+                
+                <!-- Grupo de Texto -->
+                <div>
+                    <h1 style="color: var(--dark-green); font-weight: 700; font-size: 2.5rem; letter-spacing: 0.05em;">VISÃO FINANCEIRA</h1>
+                    <p style="color: var(--text-light);" class="mt-1">Suas ferramentas para planejamento, investimentos e consultoria com IA.</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="mb-6 flex flex-wrap justify-center border-b" style="border-color: #e0d9cf;">
+            <button class="tab-button active py-3 px-4 md:px-6 text-sm md:text-base font-medium text-gray-600 focus:outline-none" onclick="showTab('patrimony', event)">Calculadora de Patrimônio</button>
+            <button class="tab-button py-3 px-4 md:px-6 text-sm md:text-base font-medium text-gray-600 focus:outline-none" onclick="showTab('bonds', event)">Comparador de Títulos</button>
+            <button class="tab-button py-3 px-4 md:px-6 text-sm md:text-base font-medium text-gray-600 focus:outline-none" onclick="showTab('allocator', event)">Simulador de Aportes</button>
+            <button class="tab-button py-3 px-4 md:px-6 text-sm md:text-base font-medium text-gray-600 focus:outline-none" onclick="showTab('consultant', event)">Consultor IA</button>
+        </div>
+
+        <div>
+            <!-- CONTEÚDO DAS ABAS -->
+            <div id="patrimony" class="tab-content active">
+                <div class="card">
+                    <h2 class="text-2xl font-semibold text-gray-700 mb-6">Calculadora de Patrimônio Futuro</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mb-6 p-4 border border-gray-200 rounded-lg">
+                        <div>
+                            <div class="input-group"><label for="initialInvestment">Investimento Inicial (R$):</label><input type="text" id="initialInvestment" value="1.000,00" oninput="formatInputCurrency(this)"></div>
+                            <div class="input-group"><label for="contributionFrequency">Frequência Global dos Aportes:</label><select id="contributionFrequency"><option value="monthly" selected>Mensal</option><option value="annually">Anual</option></select></div>
+                        </div>
+                        <div>
+                             <div class="input-group"><label for="interestRate">Taxa de Juros Anual Global (%):</label><input type="number" id="interestRate" value="8" step="any"></div>
+                             <div class="input-group"><label for="inflationRate">Taxa de Inflação Anual Global (%):</label><input type="number" id="inflationRate" value="5" step="any"></div>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-700 mb-3">Fases de Investimento:</h3>
+                    <div id="patrimonyScenariosContainer" class="space-y-4 mb-4"></div>
+                    <button type="button" class="btn btn-secondary text-sm" onclick="addPatrimonyScenario()">+ Adicionar Fase</button>
+                    <hr class="my-6">
+                    <div class="flex flex-wrap gap-2 mt-4">
+                        <button class="btn btn-primary w-full sm:w-auto" onclick="calculatePatrimony()">Calcular Patrimônio</button>
+                        <button id="analyzePatrimonyBtn" class="btn btn-ai w-full sm:w-auto hidden" onclick="analyzePatrimonyWithAI()">✨ Analisar Cenário com IA</button>
+                    </div>
+                    <div id="patrimonyResults" class="mt-8 hidden">
+                        <h3 class="text-xl font-semibold text-gray-700 mb-4">Resultados:</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div class="results-card"><h4 class="text-lg font-medium">Patrimônio Final Estimado:</h4><p id="finalPatrimony" class="text-2xl font-bold"></p></div>
+                            <div class="results-card"><h4 class="text-lg font-medium">Total Investido:</h4><p id="totalInvested" class="text-2xl font-bold"></p></div>
+                            <div class="results-card"><h4 class="text-lg font-medium">Renda Mensal Bruta Gerada:</h4><p id="monthlyIncome" class="text-2xl font-bold"></p></div>
+                            <div class="results-card"><h4 class="text-lg font-medium">Renda Mensal Livre da Inflação:</h4><p id="realMonthlyIncome" class="text-2xl font-bold"></p><p class="text-sm">(Reinvestir para poder de compra: <span id="reinvestToMaintainPower"></span>)</p></div>
+                        </div>
+                         <p class="text-sm text-gray-600 mb-4">Período Total Considerado: <span id="totalYearsCalculated" class="font-semibold"></span> anos.</p>
+                        <div class="card">
+                             <h4 class="text-lg font-medium text-gray-700 mb-2">Gráfico de Evolução do Patrimônio:</h4>
+                             <div class="chart-container"><canvas id="patrimonyChart" class="rounded-lg"></canvas></div>
+                        </div>
+                    </div>
+                    <div id="patrimonyAIAnalysis" class="ai-analysis-card hidden">
+                        <h4 class="text-lg font-semibold mb-2">Análise do Cenário com IA:</h4>
+                        <div id="patrimonyAILoading" class="loading-spinner hidden"></div><p id="patrimonyAIResponse" class="text-sm whitespace-pre-wrap"></p>
+                        <p class="text-xs mt-2" style="color: var(--gold);"><i>Obs: Análise gerada por IA. Não substitui aconselhamento profissional.</i></p>
+                    </div>
+                </div>
+            </div>
+            <div id="bonds" class="tab-content">
+                 <div class="card">
+                    <h2 class="text-2xl font-semibold text-gray-700 mb-6">Comparador de Títulos: Tributável vs. Isento</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="border p-6 rounded-lg shadow-sm">
+                            <h3 class="text-xl font-semibold text-gray-700 mb-4">Título Tributável</h3>
+                            <div class="input-group"><label for="taxableAmount">Valor Aplicado (R$):</label><input type="text" id="taxableAmount" value="10.000,00" oninput="formatInputCurrency(this)"></div>
+                            <div class="input-group"><label for="taxableRate">Taxa Bruta Anual (%):</label><input type="number" id="taxableRate" value="12" step="any"></div>
+                            <div class="input-group"><label for="taxablePeriod">Prazo (Anos):</label><input type="number" id="taxablePeriod" value="2"></div>
+                            <div class="input-group"><label for="incomeTaxRate">Alíquota de IR (%):</label><input type="number" id="incomeTaxRate" value="15" step="any" placeholder="Ex: 15"><p class="text-xs text-gray-500 mt-1">IR: >720d: 15%; 361-720d: 17,5%; 181-360d: 20%; <181d: 22,5%</p></div>
+                        </div>
+                        <div class="border p-6 rounded-lg shadow-sm">
+                            <h3 class="text-xl font-semibold text-gray-700 mb-4">Título Isento de IR</h3>
+                            <div class="input-group"><label for="exemptAmount">Valor Aplicado (R$):</label><input type="text" id="exemptAmount" value="10.000,00" oninput="formatInputCurrency(this)"></div>
+                            <div class="input-group"><label for="exemptRate">Taxa Líquida Anual (%):</label><input type="number" id="exemptRate" value="10" step="any"></div>
+                            <div class="input-group"><label for="exemptPeriod">Prazo (Anos):</label><input type="number" id="exemptPeriod" value="2"></div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary mt-6 w-full md:w-auto" onclick="compareBonds()">Comparar Títulos</button>
+                    <div id="bondResults" class="mt-8 hidden">
+                        <h3 class="text-xl font-semibold text-gray-700 mb-4">Resultados:</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="results-card"><h4 class="text-lg font-medium">Título Tributável:</h4><p>Valor Bruto Final: <span id="taxableGrossFinal" class="font-semibold"></span></p><p>IR Pago: <span id="taxableTaxPaid" class="font-semibold"></span></p><p>Valor Líquido Final: <span id="taxableNetFinal" class="font-semibold text-xl"></span></p><p>Rent. Líq. Total: <span id="taxableNetProfitability" class="font-semibold"></span></p><p>Rent. Líq. Anualizada: <span id="taxableNetAnnualProfitability" class="font-semibold"></span></p></div>
+                            <div class="results-card"><h4 class="text-lg font-medium">Título Isento:</h4><p>Valor Líquido Final: <span id="exemptNetFinal" class="font-semibold text-xl"></span></p><p>Rent. Líq. Total: <span id="exemptNetProfitability" class="font-semibold"></span></p><p>Rent. Líq. Anualizada: <span id="exemptNetAnnualProfitability" class="font-semibold"></span></p></div>
+                        </div>
+                        <div id="bondRecommendation" class="mt-6 p-4 rounded-lg text-center font-semibold text-lg"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="allocator" class="tab-content">
+                <div class="card">
+                    <h2 class="text-2xl font-semibold text-gray-700 mb-6">Simulador de Aportes</h2>
+                    <div class="card p-4 mb-6" style="background-color: var(--light-green);">
+                        <h3 class="text-xl font-semibold mb-3" style="color: var(--dark-green);">Assistente de Alocação IA</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                            <div class="input-group"><label for="riskProfile">Seu Perfil de Investidor:</label><select id="riskProfile"><option value="Conservador">Conservador</option><option value="Moderado" selected>Moderado</option><option value="Arrojado">Arrojado</option></select></div>
+                            <div class="input-group"><label for="investmentGoals">Seus Objetivos (opcional):</label><input type="text" id="investmentGoals" placeholder="Ex: Aposentadoria, comprar imóvel"></div>
+                        </div>
+                        <button class="btn btn-ai w-full md:w-auto" onclick="suggestAllocationWithAI()">✨ Sugerir Estratégia com IA</button>
+                        <div id="allocationAISuggestion" class="ai-analysis-card hidden mt-4">
+                            <h4 class="text-lg font-semibold mb-2">Sugestão de Alocação da IA:</h4><div id="allocationAILoading" class="loading-spinner hidden"></div><p id="allocationAIResponse" class="text-sm whitespace-pre-wrap"></p>
+                            <p class="text-xs mt-2" style="color: var(--gold);"><i>Use esta sugestão como ponto de partida. Não é aconselhamento financeiro.</i></p>
+                        </div>
+                    </div>
+                    <div class="input-group"><label for="totalContribution">Valor Total do Aporte (R$):</label><input type="text" id="totalContribution" value="1.000,00" oninput="formatInputCurrency(this)"></div>
+                    <div id="assetClassesContainer" class="space-y-4 mb-4"></div>
+                    <div class="flex flex-wrap gap-2 mb-6">
+                        <button class="btn btn-secondary text-sm" onclick="addAssetClass()">Adicionar Classe de Ativo</button>
+                        <button class="btn btn-primary w-full md:w-auto" onclick="simulateAllocation()">Simular Aporte</button>
+                    </div>
+                    <div id="allocationResults" class="mt-8 hidden">
+                        <h3 class="text-xl font-semibold text-gray-700 mb-4">Resultado da Alocação:</h3>
+                        <div id="allocationDetails" class="space-y-4"></div><p id="allocationError" class="error-message mt-4"></p>
+                    </div>
+                </div>
+            </div>
+            <div id="consultant" class="tab-content">
+                <div class="card">
+                    <h2 class="text-2xl font-semibold text-gray-700 mb-6">Consultor Financeiro IA</h2>
+                    <p class="text-gray-600 mb-4">Faça perguntas sobre finanças, investimentos, ou peça para a IA analisar seus cenários.</p>
+                    <div class="input-group"><label for="userQueryAI">Sua Pergunta:</label><textarea id="userQueryAI" rows="4" placeholder="Ex: Qual a melhor forma de começar a investir com pouco dinheiro?"></textarea></div>
+                    <button class="btn btn-ai w-full md:w-auto mt-2" onclick="askConsultant()">💬 Perguntar ao Consultor IA</button>
+                    <div id="consultantAIAnalysis" class="ai-analysis-card hidden mt-6">
+                        <h4 class="text-lg font-semibold mb-2">Resposta do Consultor IA:</h4>
+                        <div id="consultantAILoading" class="loading-spinner hidden"></div><p id="consultantAIResponse" class="text-sm whitespace-pre-wrap"></p>
+                        <p class="text-xs mt-2" style="color: var(--gold);"><i>Lembre-se: esta é uma IA para fins informativos, não substituindo um profissional qualificado.</i></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="text-center mt-12 mb-4">
+            <p class="text-xs text-gray-500">
+                Este site não tem como finalidade fazer indicações de investimentos, o site não substitui o serviço de um profissional qualificado.
+            </p>
+        </footer>
+
+    </div>
+<script>
+    let patrimonyChartInstance = null;
+    let lastPatrimonyData = null;
+    let patrimonyScenarioIdCounter = 0;
+    let assetClassIdCounter = 0;
+    let assetIdCounter = 0;
+
+    function formatCurrency(value) { return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+    function formatPercent(value) { return (value * 100).toFixed(2) + '%'; }
+    function unformatCurrency(valueStr) { if (typeof valueStr !== 'string') return parseFloat(valueStr) || 0; return parseFloat(valueStr.replace(/\./g, '').replace(',', '.')) || 0; }
+    function formatInputCurrency(el) { let v = el.value.replace(/\D/g, ''); v = (parseInt(v) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); if (v === 'NaN' || v === '0,00') { el.value = '' } else { el.value = v } }
+    
+    function showTab(tabName, event) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.getElementById(tabName).classList.add('active');
+        document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+        if (event && event.currentTarget) { event.currentTarget.classList.add('active') } else {
+            document.querySelectorAll('.tab-button').forEach(b => {
+                const oA = b.getAttribute('onclick');
+                if (oA && (oA.includes(`showTab('${tabName}'`) || oA.includes(`showTab("${tabName}"`))) { b.classList.add('active') }
+            });
+        }
+    }
+
+    // --- FUNÇÃO DE API MODIFICADA PARA USAR O PROXY DO NETLIFY ---
+    async function callApiProxy(promptText, loadingElementId, responseElementId, errorElementId = null) {
+        const loadingEl = document.getElementById(loadingElementId);
+        const responseEl = document.getElementById(responseElementId);
+        const errorEl = errorElementId ? document.getElementById(errorElementId) : null;
+        if (loadingEl) loadingEl.classList.remove('hidden');
+        if (responseEl) responseEl.textContent = '';
+        if (errorEl) errorEl.textContent = '';
+
+        const functionUrl = '/.netlify/functions/ask-ai'; // Endpoint da nossa função segura
+        try {
+            const response = await fetch(functionUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: promptText })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `Erro na função do servidor: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+
+            if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                responseEl.textContent = result.candidates[0].content.parts[0].text;
+            } else {
+                if(result.error) {
+                     throw new Error(`Erro da API Gemini: ${result.error.message}`);
+                }
+                throw new Error("Resposta da API em formato inesperado.");
+            }
+        } catch (err) {
+            console.error("Falha ao chamar o proxy da API:", err);
+            if (responseEl) responseEl.textContent = "Desculpe, não foi possível obter a resposta da IA. Verifique a configuração da função no Netlify e a chave de API.";
+            if (errorEl) errorEl.textContent = `Erro: ${err.message}`;
+        } finally {
+            if (loadingEl) loadingEl.classList.add('hidden');
+        }
+    }
+
+    // --- CALCULADORA DE PATRIMÔNIO ---
+    function addPatrimonyScenario() {
+        patrimonyScenarioIdCounter++;
+        const container = document.getElementById('patrimonyScenariosContainer');
+        const scenarioDiv = document.createElement('div');
+        scenarioDiv.className = 'card p-4 mb-4 border border-dashed border-gray-300 relative';
+        scenarioDiv.id = `pS-${patrimonyScenarioIdCounter}`;
+        scenarioDiv.innerHTML = `<button type="button" class="btn-remove absolute top-2 right-2 z-10" onclick="removePatrimonyScenario('pS-${patrimonyScenarioIdCounter}')">X</button><h4 class="text-md font-semibold text-gray-600 mb-3">Fase ${patrimonyScenarioIdCounter}</h4><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3"><div class="input-group"><label for="sD-${patrimonyScenarioIdCounter}">Duração (Anos):</label><input type="number" id="sD-${patrimonyScenarioIdCounter}" class="s-d" value="5" min="1"></div><div class="input-group"><label for="sC-${patrimonyScenarioIdCounter}">Aporte Regular (R$):</label><input type="text" id="sC-${patrimonyScenarioIdCounter}" class="s-c" value="0,00" oninput="formatInputCurrency(this)"></div></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="input-group"><label for="sEC-${patrimonyScenarioIdCounter}">Aporte Extra Anual (R$):</label><input type="text" id="sEC-${patrimonyScenarioIdCounter}" class="s-ec" value="0,00" oninput="formatInputCurrency(this)"></div><div class="input-group"><label for="sEM-${patrimonyScenarioIdCounter}">Mês do Aporte Extra (1-12):</label><input type="number" id="sEM-${patrimonyScenarioIdCounter}" class="s-em" value="12" min="1" max="12"></div></div>`;
+        container.appendChild(scenarioDiv);
+        formatInputCurrency(document.getElementById(`sC-${patrimonyScenarioIdCounter}`));
+        formatInputCurrency(document.getElementById(`sEC-${patrimonyScenarioIdCounter}`));
+    }
+    function removePatrimonyScenario(scenarioId) {
+        if (document.querySelectorAll('.card[id^="pS-"]').length <= 1) {
+            alert("É necessário pelo menos uma fase de investimento.");
+            return;
+        }
+        document.getElementById(scenarioId)?.remove();
+    }
+    function calculatePatrimony() {
+        const initialInvestment = unformatCurrency(document.getElementById('initialInvestment').value);
+        const annualInterestRate = parseFloat(document.getElementById('interestRate').value) / 100 || 0;
+        const annualInflationRate = parseFloat(document.getElementById('inflationRate').value) / 100 || 0;
+        const contributionFrequency = document.getElementById('contributionFrequency').value;
+        const scenarioElements = document.querySelectorAll('.card[id^="pS-"]');
+        const scenariosData = [];
+        let totalYears = 0;
+        for (let el of scenarioElements) {
+            const duration = parseInt(el.querySelector('.s-d').value) || 0;
+            if (duration <= 0) { alert(`A duração da Fase deve ser > 0.`); return; }
+            scenariosData.push({ d: duration, rC: unformatCurrency(el.querySelector('.s-c').value), eC: unformatCurrency(el.querySelector('.s-ec').value), eM: parseInt(el.querySelector('.s-em').value) || 12 });
+            totalYears += duration;
+        }
+        if (scenariosData.length === 0) { alert("Adicione pelo menos uma fase de investimento."); return; }
+        let currentPatrimony = initialInvestment;
+        let totalInvested = initialInvestment;
+        let evolutionData = [{ x: 0, y: initialInvestment }];
+        let monthsElapsed = 0;
+        const monthlyInterest = Math.pow(1 + annualInterestRate, 1 / 12) - 1;
+        for (const scenario of scenariosData) {
+            for (let m = 1; m <= scenario.d * 12; m++) {
+                currentPatrimony *= (1 + monthlyInterest);
+                let regularContribution = (contributionFrequency === 'monthly') ? scenario.rC : (m % 12 === 0 ? scenario.rC : 0);
+                currentPatrimony += regularContribution;
+                totalInvested += regularContribution;
+                if (scenario.eC > 0 && (m - 1) % 12 + 1 === scenario.eM) {
+                    currentPatrimony += scenario.eC;
+                    totalInvested += scenario.eC;
+                }
+                monthsElapsed++;
+                evolutionData.push({ x: monthsElapsed, y: currentPatrimony });
+            }
+        }
+        const monthlyIncome = currentPatrimony * monthlyInterest;
+        const monthlyInflation = Math.pow(1 + annualInflationRate, 1 / 12) - 1;
+        const reinvestValue = currentPatrimony * monthlyInflation;
+        document.getElementById('finalPatrimony').textContent = formatCurrency(currentPatrimony);
+        document.getElementById('totalInvested').textContent = formatCurrency(totalInvested);
+        document.getElementById('monthlyIncome').textContent = formatCurrency(monthlyIncome);
+        document.getElementById('realMonthlyIncome').textContent = formatCurrency(monthlyIncome - reinvestValue);
+        document.getElementById('reinvestToMaintainPower').textContent = formatCurrency(reinvestValue);
+        document.getElementById('totalYearsCalculated').textContent = totalYears;
+        document.getElementById('patrimonyResults').classList.remove('hidden');
+        document.getElementById('analyzePatrimonyBtn').classList.remove('hidden');
+        lastPatrimonyData = { iI: initialInvestment, s: scenariosData, cF: contributionFrequency, aIR: annualInterestRate, aFR: annualInflationRate, fP: currentPatrimony, mInc: monthlyIncome, rMI: monthlyIncome - reinvestValue, tY: totalYears };
+        const ctx = document.getElementById('patrimonyChart').getContext('2d');
+        if (patrimonyChartInstance) patrimonyChartInstance.destroy();
+        patrimonyChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: evolutionData.map(p => p.x),
+                datasets: [{ label: 'Evolução do Patrimônio (R$)', data: evolutionData.map(p => p.y.toFixed(2)), borderColor: '#C4A97A', backgroundColor: 'rgba(196, 169, 122, 0.2)', fill: true, tension: 0.1 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { ticks: { callback: v => formatCurrency(v) } }, x: { title: { display: true, text: 'Meses' } } }, plugins: { tooltip: { callbacks: { label: c => formatCurrency(parseFloat(c.raw)) } } } }
+        });
+    }
+    async function analyzePatrimonyWithAI() {
+        if (!lastPatrimonyData) return;
+        document.getElementById('patrimonyAIAnalysis').classList.remove('hidden');
+        let scenarioDetails = lastPatrimonyData.s.map((s, i) => `  - Fase ${i + 1}: ${s.d} anos, aporte de ${formatCurrency(s.rC)} (${lastPatrimonyData.cF})` + (s.eC > 0 ? `, com extra anual de ${formatCurrency(s.eC)}.`: '.')).join('\n');
+        const prompt = `Analise o seguinte cenário financeiro:\n- Investimento Inicial: ${formatCurrency(lastPatrimonyData.iI)}\n- Fases:\n${scenarioDetails}\n- Juros Anual: ${formatPercent(lastPatrimonyData.aIR)}\n- Inflação Anual: ${formatPercent(lastPatrimonyData.aFR)}\n- Total de Anos: ${lastPatrimonyData.tY}\n- Resultado Final: ${formatCurrency(lastPatrimonyData.fP)}\n- Renda Mensal: ${formatCurrency(lastPatrimonyData.mInc)}\n\nForneça uma análise concisa sobre os pontos positivos, riscos e sugestões.`;
+        await callApiProxy(prompt, 'patrimonyAILoading', 'patrimonyAIResponse');
+    }
+    
+    // --- COMPARADOR DE TÍTULOS ---
+    function compareBonds() {
+        const taxableAmount = unformatCurrency(document.getElementById('taxableAmount').value);
+        const taxableRate = parseFloat(document.getElementById('taxableRate').value) / 100 || 0;
+        const taxablePeriod = parseFloat(document.getElementById('taxablePeriod').value) || 0;
+        const incomeTaxRate = parseFloat(document.getElementById('incomeTaxRate').value) / 100 || 0;
+        const exemptAmount = unformatCurrency(document.getElementById('exemptAmount').value);
+        const exemptRate = parseFloat(document.getElementById('exemptRate').value) / 100 || 0;
+        const exemptPeriod = parseFloat(document.getElementById('exemptPeriod').value) || 0;
+        if (taxableAmount <= 0 || taxableRate <= 0 || taxablePeriod <= 0 || isNaN(incomeTaxRate)) { alert("Preencha todos os campos do Título Tributável."); return; }
+        if (exemptAmount <= 0 || exemptRate <= 0 || exemptPeriod <= 0) { alert("Preencha todos os campos do Título Isento."); return; }
+        const taxableGrossFinal = taxableAmount * Math.pow(1 + taxableRate, taxablePeriod);
+        const taxableProfit = taxableGrossFinal - taxableAmount;
+        const taxableTaxPaid = taxableProfit * incomeTaxRate;
+        const taxableNetFinal = taxableGrossFinal - taxableTaxPaid;
+        const taxableNetProfitabilityTotal = (taxableNetFinal / taxableAmount) - 1;
+        const taxableNetAnnualProfitability = Math.pow(1 + taxableNetProfitabilityTotal, 1 / taxablePeriod) - 1;
+        document.getElementById('taxableGrossFinal').textContent = formatCurrency(taxableGrossFinal);
+        document.getElementById('taxableTaxPaid').textContent = formatCurrency(taxableTaxPaid);
+        document.getElementById('taxableNetFinal').textContent = formatCurrency(taxableNetFinal);
+        document.getElementById('taxableNetProfitability').textContent = formatPercent(taxableNetProfitabilityTotal);
+        document.getElementById('taxableNetAnnualProfitability').textContent = formatPercent(taxableNetAnnualProfitability);
+        const exemptNetFinal = exemptAmount * Math.pow(1 + exemptRate, exemptPeriod);
+        const exemptNetProfitabilityTotal = (exemptNetFinal / exemptAmount) - 1;
+        const exemptNetAnnualProfitability = Math.pow(1 + exemptNetProfitabilityTotal, 1 / exemptPeriod) - 1;
+        document.getElementById('exemptNetFinal').textContent = formatCurrency(exemptNetFinal);
+        document.getElementById('exemptNetProfitability').textContent = formatPercent(exemptNetProfitabilityTotal);
+        document.getElementById('exemptNetAnnualProfitability').textContent = formatPercent(exemptNetAnnualProfitability);
+        const recommendationDiv = document.getElementById('bondRecommendation');
+        if (taxableNetFinal > exemptNetFinal) { recommendationDiv.textContent = "O Título Tributável parece ser mais vantajoso."; recommendationDiv.className = 'mt-6 p-4 rounded-lg text-center font-semibold text-lg bg-green-100 text-green-800'; }
+        else if (exemptNetFinal > taxableNetFinal) { recommendationDiv.textContent = "O Título Isento parece ser mais vantajoso."; recommendationDiv.className = 'mt-6 p-4 rounded-lg text-center font-semibold text-lg bg-green-100 text-green-800'; }
+        else { recommendationDiv.textContent = "Ambos oferecem rentabilidade similar."; recommendationDiv.className = 'mt-6 p-4 rounded-lg text-center font-semibold text-lg bg-blue-100 text-blue-800'; }
+        document.getElementById('bondResults').classList.remove('hidden');
+    }
+
+    // --- SIMULADOR DE APORTES ---
+    async function suggestAllocationWithAI() {
+        const riskProfile = document.getElementById('riskProfile').value;
+        const investmentGoals = document.getElementById('investmentGoals').value;
+        document.getElementById('allocationAISuggestion').classList.remove('hidden');
+        const prompt = `Sugira uma alocação de ativos para perfil ${riskProfile} e objetivos: "${investmentGoals || 'crescimento patrimonial'}". Apresente em lista com % para Renda Fixa, Ações, FIIs etc. Soma 100%. Justifique brevemente.`;
+        await callApiProxy(prompt, 'allocationAILoading', 'allocationAIResponse');
+    }
+    function addAssetClass(className = '', classPercentage = '', assets = []) {
+        assetClassIdCounter++;
+        const container = document.getElementById('assetClassesContainer');
+        const classDiv = document.createElement('div');
+        classDiv.className = 'asset-class-item';
+        classDiv.id = `aC-${assetClassIdCounter}`;
+        classDiv.innerHTML = `<div class="flex justify-between items-center mb-2"><h4 class="text-lg font-semibold" style="color:var(--dark-green)">Classe ${assetClassIdCounter}</h4><button type="button" class="btn-remove text-xs" onclick="removeElement('aC-${assetClassIdCounter}')">Remover</button></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="input-group"><label for="cN-${assetClassIdCounter}">Nome:</label><input type="text" id="cN-${assetClassIdCounter}" value="${className}" placeholder="Ex: Renda Fixa"></div><div class="input-group"><label for="cP-${assetClassIdCounter}">% do total:</label><input type="number" id="cP-${assetClassIdCounter}" value="${classPercentage}" placeholder="50" oninput="updateAssetTotalPercentage('aC-${assetClassIdCounter}')"></div></div><div id="asC-${assetClassIdCounter}" class="mt-4 space-y-3 pl-4 border-l-2" style="border-color:var(--gold)"></div><button type="button" class="btn btn-secondary mt-3" style="padding:0.25rem 0.75rem;font-size:0.8rem;" onclick="addAssetToClass(${assetClassIdCounter})">+ Ativo</button><p class="text-xs text-gray-500 mt-2">Soma % ativos: <span id="assetTotalPercentage-${assetClassIdCounter}">0</span>% (deve ser 100%)</p>`;
+        container.appendChild(classDiv);
+        if (assets.length > 0) { assets.forEach(a => addAssetToClass(assetClassIdCounter, a.name, a.percentage)); }
+        updateAssetTotalPercentage(`aC-${assetClassIdCounter}`);
+    }
+    function addAssetToClass(classId, assetName = '', assetPercentage = '') {
+        assetIdCounter++;
+        const container = document.getElementById(`asC-${classId}`);
+        const assetDiv = document.createElement('div');
+        assetDiv.className = 'asset-item';
+        assetDiv.id = `a-${assetIdCounter}`;
+        assetDiv.innerHTML = `<div class="flex justify-between items-center mb-2"><h5 class="text-md font-medium text-gray-600">Ativo</h5><button type="button" class="btn-remove text-xs" onclick="removeElement('a-${assetIdCounter}','aC-${classId}')">X</button></div><div class="grid grid-cols-1 md:grid-cols-2 gap-2"><div class="input-group"><label for="aN-${assetIdCounter}" class="text-sm">Nome:</label><input type="text" id="aN-${assetIdCounter}" value="${assetName}" class="text-sm p-2" placeholder="Ex: Tesouro Selic"></div><div class="input-group"><label for="aP-${assetIdCounter}" class="text-sm">% (da classe):</label><input type="number" id="aP-${assetIdCounter}" value="${assetPercentage}" class="text-sm p-2" placeholder="60" oninput="updateAssetTotalPercentage('aC-${classId}')"></div></div>`;
+        container.appendChild(assetDiv);
+        updateAssetTotalPercentage(`aC-${classId}`);
+    }
+    function removeElement(elementId, parentClassId = null) {
+        document.getElementById(elementId)?.remove();
+        if (parentClassId) updateAssetTotalPercentage(parentClassId);
+    }
+    function updateAssetTotalPercentage(classElementId) {
+        const classElement = document.getElementById(classElementId);
+        if (!classElement) return;
+        const assetPercentageInputs = classElement.querySelectorAll('input[id^="aP-"]');
+        let totalAssetPercentage = 0;
+        assetPercentageInputs.forEach(i => { totalAssetPercentage += parseFloat(i.value) || 0; });
+        const classIdNumber = classElementId.split('-')[1];
+        const displaySpan = document.getElementById(`assetTotalPercentage-${classIdNumber}`);
+        if (displaySpan) {
+            displaySpan.textContent = totalAssetPercentage.toFixed(1);
+            const isSumCorrect = Math.abs(totalAssetPercentage - 100) < 0.1;
+            displaySpan.classList.toggle('text-red-500', !isSumCorrect && assetPercentageInputs.length > 0);
+            displaySpan.classList.toggle('text-green-500', isSumCorrect && assetPercentageInputs.length > 0);
+            if (assetPercentageInputs.length === 0) displaySpan.classList.remove('text-red-500', 'text-green-500');
+        }
+    }
+    function simulateAllocation() {
+        const totalContribution = unformatCurrency(document.getElementById('totalContribution').value);
+        const allocationResultsDiv = document.getElementById('allocationResults');
+        const allocationDetailsDiv = document.getElementById('allocationDetails');
+        const allocationErrorP = document.getElementById('allocationError');
+        allocationDetailsDiv.innerHTML = '';
+        allocationErrorP.textContent = '';
+        allocationResultsDiv.classList.add('hidden');
+        if (totalContribution <= 0) {
+            allocationErrorP.textContent = "O valor do aporte deve ser > 0.";
+            allocationResultsDiv.classList.remove('hidden');
+            return;
+        }
+        const assetClasses = [];
+        const classElements = document.querySelectorAll('.asset-class-item');
+        let totalClassPercentage = 0;
+        let errorMessages = [];
+        classElements.forEach(cE => {
+            const cI = cE.id.split('-')[1];
+            const cN = document.getElementById(`cN-${cI}`).value.trim();
+            const cP = parseFloat(document.getElementById(`cP-${cI}`).value) || 0;
+            if (!cN) errorMessages.push(`Nome da Classe ${cI} não pode ser vazio.`);
+            if (cP <= 0) errorMessages.push(`% da Classe "${cN || `Classe ${cI}`}" deve ser > 0.`);
+            else totalClassPercentage += cP;
+            const assets = [];
+            const assetElements = cE.querySelectorAll('.asset-item');
+            let totalAssetPercentageInClass = 0;
+            assetElements.forEach(aE => {
+                const aI = aE.id.split('-')[1];
+                const aN = document.getElementById(`aN-${aI}`).value.trim();
+                const aP = parseFloat(document.getElementById(`aP-${aI}`).value) || 0;
+                if (!aN) errorMessages.push(`Nome do Ativo (ID: ${aI}) na classe "${cN}" não pode ser vazio.`);
+                if (aP <= 0) errorMessages.push(`% do Ativo "${aN || `Ativo ${aI}`}" deve ser > 0.`);
+                else totalAssetPercentageInClass += aP;
+                assets.push({ name: aN, percentage: aP });
+            });
+            if (assetElements.length > 0 && Math.abs(totalAssetPercentageInClass - 100) > 0.1) errorMessages.push(`Soma das % na classe "${cN}" não é 100%.`);
+            assetClasses.push({ name: cN, percentage: cP, assets: assets });
+        });
+        if (classElements.length > 0 && Math.abs(totalClassPercentage - 100) > 0.1) errorMessages.push(`Soma das % das classes não é 100%.`);
+        if (classElements.length === 0 && totalContribution > 0) errorMessages.push("Adicione classes de ativo para simular.");
+        if (errorMessages.length > 0) {
+            allocationErrorP.innerHTML = errorMessages.join('<br>');
+            allocationResultsDiv.classList.remove('hidden');
+            return;
+        }
+        allocationResultsDiv.classList.remove('hidden');
+        assetClasses.forEach(ac => {
+            const classAllocationAmount = totalContribution * (ac.percentage / 100);
+            const classDiv = document.createElement('div');
+            classDiv.className = 'p-3 border rounded-md bg-gray-50 shadow-sm';
+            let classContent = `<h4 class="font-semibold" style="color:var(--dark-green)">${ac.name} (${ac.percentage}%): ${formatCurrency(classAllocationAmount)}</h4>`;
+            if (ac.assets.length > 0) {
+                const assetList = document.createElement('ul');
+                assetList.className = 'list-disc list-inside ml-4 mt-1 text-sm text-gray-600';
+                ac.assets.forEach(a => {
+                    const assetAmount = classAllocationAmount * (a.percentage / 100);
+                    const listItem = document.createElement('li');
+                    listItem.textContent = `${a.name} (${a.percentage}%): ${formatCurrency(assetAmount)}`;
+                    assetList.appendChild(listItem);
+                });
+                classDiv.innerHTML = classContent;
+                classDiv.appendChild(assetList);
+            } else {
+                classDiv.innerHTML = classContent + `<p class="text-sm text-gray-500 ml-4 mt-1">Nenhum ativo detalhado.</p>`;
+            }
+            allocationDetailsDiv.appendChild(classDiv);
+        });
+    }
+
+    // --- CONSULTOR IA ---
+    async function askConsultant() {
+        const userQuery = document.getElementById('userQueryAI').value;
+        if (!userQuery.trim()) { alert("Digite sua pergunta."); return; }
+        document.getElementById('consultantAIAnalysis').classList.remove('hidden');
+        const prompt = `Você é um Consultor Financeiro IA. Responda a seguinte pergunta de forma clara: "${userQuery}". Lembre que suas respostas são educacionais e não substituem aconselhamento profissional.`;
+        await callApiProxy(prompt, 'consultantAILoading', 'consultantAIResponse');
+    }
+
+    // --- INICIALIZAÇÃO ---
+    document.addEventListener('DOMContentLoaded', () => {
+        showTab('patrimony');
+        addPatrimonyScenario();
+        ['initialInvestment', 'taxableAmount', 'exemptAmount', 'totalContribution'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) formatInputCurrency(el);
+        });
+    });
+</script>
+</body>
+</html>

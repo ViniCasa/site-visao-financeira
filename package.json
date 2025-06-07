@@ -1,0 +1,7 @@
+# Conteúdo para package.json
+{
+  "name": "netlify-functions",
+  "dependencies": {
+    "node-fetch": "^2.6.0"
+  }
+}
